@@ -1,3 +1,3 @@
-# mnist-backprop
+# mnist-neural-networks
 
-Feedforward neural network and backpropagation for MNIST classification
+Experiments with neural networks and backpropagation on MNIST classification
