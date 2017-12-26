@@ -27,12 +27,12 @@ class ReLU:
 		return 1 * (values > 0)
 
 class LeakyReLU:
-	def init(self, leak):
+	def __init__(self, leak):
 		self.leak = leak
 
 	def value(self, X):
 		# add nonzero slope to ReLU for x < 0
-		return (X * (X > 0)) + (self.leak * (X <= 0))
+		return (X * (X > 0)) + (self.leak * (X * (X <= 0)))
 
 	def slope(self, values):
-		return (1 * (values > 0)) + (self.leak * values <= 0)
+		return (1 * (values > 0)) + (self.leak * (values <= 0))
