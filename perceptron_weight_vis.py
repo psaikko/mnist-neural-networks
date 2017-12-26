@@ -3,8 +3,6 @@ import idx2numpy
 from matplotlib import pyplot
 from activation import *
 
-def sigmoid(X):
-	return 1.0 / (1.0 + numpy.exp(-X))
 
 def loss(Y_pred, Y_true):
 	diff = numpy.reshape(Y_true - Y_pred, (Y_true.shape[0] * Y_true.shape[1]))
@@ -15,6 +13,14 @@ def to_onehot(Y):
 
 def correct(Y_true, Y_pred):
 	return numpy.all((1.0 * (Y_pred > 0.5)) == Y_true, axis=1)
+
+def add_bias_column(X):
+	shape = list(X.shape)
+	# extend last dimension
+	shape[-1] += 1
+	ones = numpy.ones(shape)
+	ones[...,:-1] = X
+	return ones
 
 # read data from file
 test_x = idx2numpy.convert_from_file('data/t10k-images-idx3-ubyte')
@@ -38,15 +44,20 @@ flattened_train_x = numpy.reshape(train_x, (N_train, img_size)) / 256
 onehot_test_y = to_onehot(test_y)
 onehot_train_y = to_onehot(train_y)
 
+# bias weights?
+bias = True
+
 # initialize random weights with mean 0
-W = 2 * numpy.random.rand(n_cats, img_width*img_height) - 1
+node_weights = img_size
+if bias: node_weights += 1
+W = 2 * numpy.random.rand(n_cats, node_weights) - 1
 
 # track development of matrix weights
 history_slices = 10
 W_history = []
 
 # iterations of gradient descent
-epochs = 10000
+epochs = 10
 
 # gradient descent speed
 eps = 0.0001
@@ -61,6 +72,8 @@ for i in range(epochs):
 	batch_idxs = numpy.random.choice(N_train, batch_size, replace=False)
 	batch_x = flattened_train_x[batch_idxs]
 	batch_y = onehot_train_y[batch_idxs]
+
+	if bias: batch_x = add_bias_column(batch_x)
 
 	# sigmoid activation of matrix product
 	pred_y = activation.value(numpy.dot(batch_x, W.T))
@@ -82,10 +95,12 @@ for i in range(epochs):
 
 	# record weight development
 	if i % (epochs // history_slices) == 0:
-		W_history += [numpy.copy(numpy.reshape(W, (n_cats, img_height, img_width)))]
+		W_history += [numpy.copy(numpy.reshape(W[...,:img_size], (n_cats, img_height, img_width)))]
 
 # check predictions on test data
-correct_predictions = correct(onehot_test_y, activation.value(numpy.dot(flattened_test_x, W.T)))
+if bias: flattened_test_x = add_bias_column(flattened_test_x)
+predictions = activation.value(numpy.dot(flattened_test_x, W.T))
+correct_predictions = correct(onehot_test_y, predictions)
 
 num_correct = sum(correct_predictions)
 
