@@ -46,7 +46,7 @@ history_slices = 10
 W_history = []
 
 # iterations of gradient descent
-epochs = 100
+epochs = 10000
 
 # gradient descent speed
 eps = 0.0001
@@ -54,21 +54,28 @@ eps = 0.0001
 # choose activation function
 activation = SoftMax()
 
+# batch size for SGD
+batch_size = 10000
+
 for i in range(epochs):
+	batch_idxs = numpy.random.choice(N_train, batch_size, replace=False)
+	batch_x = flattened_train_x[batch_idxs]
+	batch_y = onehot_train_y[batch_idxs]
+
 	# sigmoid activation of matrix product
-	pred_y = activation.value(numpy.dot(flattened_train_x, W.T))
+	pred_y = activation.value(numpy.dot(batch_x, W.T))
 
 	# count correct predictions
-	result = correct(onehot_train_y, pred_y)
+	result = correct(batch_y, pred_y)
 
 	print("Epoch %-5d Correct %d/%d\tLoss %.4f" %
-		(i, sum(result), N_train, loss(pred_y, onehot_train_y)))
+		(i, sum(result), batch_size, loss(pred_y, batch_y)))
 
 	# compute gradients from activation function slope
-	gradient = (pred_y - onehot_train_y) * activation.slope(pred_y)
+	gradient = (pred_y - batch_y) * activation.slope(pred_y)
 
-	# apply gradient to weight matrix
-	delta = -eps * numpy.dot(gradient.T, flattened_train_x)
+	# apply gradient to input
+	delta = -eps * numpy.dot(gradient.T, batch_x)
 
 	# update weight matrix
 	W += delta
