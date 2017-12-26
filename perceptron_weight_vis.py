@@ -1,6 +1,7 @@
 import numpy
 import idx2numpy
 from matplotlib import pyplot
+from activation import *
 
 def sigmoid(X):
 	return 1.0 / (1.0 + numpy.exp(-X))
@@ -38,30 +39,33 @@ onehot_test_y = to_onehot(test_y)
 onehot_train_y = to_onehot(train_y)
 
 # initialize random weights with mean 0
-W = 2.0 * numpy.random.rand(n_cats, img_width*img_height) - 1.0
+W = 2 * numpy.random.rand(n_cats, img_width*img_height) - 1
 
 # track development of matrix weights
 history_slices = 10
 W_history = []
 
 # iterations of gradient descent
-epochs = 5000
+epochs = 100
 
 # gradient descent speed
 eps = 0.0001
 
+# choose activation function
+activation = SoftMax()
+
 for i in range(epochs):
 	# sigmoid activation of matrix product
-	pred_y = sigmoid(numpy.dot(flattened_train_x, W.T))
+	pred_y = activation.value(numpy.dot(flattened_train_x, W.T))
 
 	# count correct predictions
 	result = correct(onehot_train_y, pred_y)
 
-	print("Epoch %-5d Correct %d/%d" % (i, sum(result), N_train))
+	print("Epoch %-5d Correct %d/%d\tLoss %.4f" %
+		(i, sum(result), N_train, loss(pred_y, onehot_train_y)))
 
-	# sigmoid ( f(x) ) derivative f'(x) = f(x) * (1 - f(x))
-	# compute gradient from error (predicted_class - true_class)
-	gradient = (pred_y - onehot_train_y) * pred_y * (1.0 - pred_y)
+	# compute gradients from activation function slope
+	gradient = (pred_y - onehot_train_y) * activation.slope(pred_y)
 
 	# apply gradient to weight matrix
 	delta = -eps * numpy.dot(gradient.T, flattened_train_x)
@@ -74,7 +78,7 @@ for i in range(epochs):
 		W_history += [numpy.copy(numpy.reshape(W, (n_cats, img_height, img_width)))]
 
 # check predictions on test data
-correct_predictions = correct(onehot_test_y, sigmoid(numpy.dot(flattened_test_x, W.T)))
+correct_predictions = correct(onehot_test_y, activation.value(numpy.dot(flattened_test_x, W.T)))
 
 num_correct = sum(correct_predictions)
 
