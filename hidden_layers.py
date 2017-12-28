@@ -4,9 +4,7 @@ import matplotlib
 matplotlib.use("TkAgg") # doesn't steal focus on update
 
 from matplotlib import pyplot
-
-def sigmoid(X):
-	return 1.0 / (1.0 + numpy.exp(-X))
+from activation import *
 
 def loss(Y_pred, Y_true):
 	diff = numpy.reshape(Y_true - Y_pred, (Y_true.shape[0] * Y_true.shape[1]))
@@ -18,11 +16,11 @@ def to_onehot(Y):
 def correct(Y_true, Y_pred):
 	return numpy.all((1.0 * (Y_pred > 0.5)) == Y_true, axis=1)
 
-def forward_propagate(X_in, W):
+def forward_propagate(X_in, W, activations):
 	layer_output = []
 	res = X_in
-	for w in W:
-		res = numpy.copy(sigmoid(numpy.dot(res, w.T)))
+	for (w, f) in zip(W, activations):
+		res = numpy.copy(f.value(numpy.dot(res, w.T)))
 		layer_output += [res]
 	return layer_output
 
@@ -48,14 +46,16 @@ flattened_train_x = (numpy.reshape(train_x, (N_train, img_size)) / 256)
 onehot_test_y = to_onehot(test_y)
 onehot_train_y = to_onehot(train_y)
 
-layer_sizes = [img_size, 12, 11, n_cats]
+layer_sizes = [img_size, 30, 30, 30, n_cats]
+
+activations = [Sigmoid(), Sigmoid(), Sigmoid(), SoftMax()]
 
 # initialize random weights with mean 0
 W = [2.0 * numpy.random.rand(layer_sizes[i+1], layer_sizes[i]) - 1.0
      for i in range(len(layer_sizes) - 1) ]
 
 # iterations of gradient descent
-epochs = 1
+epochs = 500
 
 # gradient descent step size
 eps = 0.0001
@@ -71,7 +71,7 @@ for i in range(epochs):
 	deltas = []
 
 	# compute output of each layer
-	layer_outputs = forward_propagate(flattened_train_x, W)
+	layer_outputs = forward_propagate(flattened_train_x, W, activations)
 	pred_y = layer_outputs[-1]
 
 	# count correct predictions
@@ -93,9 +93,9 @@ for i in range(epochs):
 
 	# backpropagation
 	layer_inputs = [flattened_train_x] + layer_outputs[:-1]
-	for (w,layer_input,layer_output) in reversed(list(zip(W, layer_inputs, layer_outputs))):
+	for (w,f,layer_input,layer_output) in reversed(list(zip(W, activations, layer_inputs, layer_outputs))):
 		# error on previous layer * derivative of activation (sigmoid)
-		gradient = err * layer_output * (1.0 - layer_output)
+		gradient = err * f.slope(layer_output) # layer_output * (1.0 - layer_output)
 
 		# apply gradient with step size to next layer output
 		delta = -eps * numpy.dot(gradient.T, layer_input)
@@ -111,7 +111,7 @@ for i in range(epochs):
 		w += delta
 
 # check predictions on test data
-predictions = forward_propagate(flattened_test_x, W)[-1]
+predictions = forward_propagate(flattened_test_x, W, activations)[-1]
 correct_predictions = correct(onehot_test_y, predictions)
 
 num_correct = sum(correct_predictions)
@@ -137,15 +137,17 @@ for (layer_size, layer_index) in zip(layer_sizes[2:], range(2,len(layer_sizes)))
 
 	vis_weights += [layer_weights]
 
-H = len(vis_weights)
-W = max(layer_sizes[1:])
+sub_h = len(vis_weights)
+sub_w = max(layer_sizes[1:])
 
 pyplot.figure(2)
-for layer in range(H):
+for layer in range(sub_h):
 	for weights in range(len(vis_weights[layer])):
-		pyplot.subplot(H, W, 1 + layer*W + weights)
+		pyplot.subplot(sub_h, sub_w, 1 + layer*sub_w + weights)
 		pyplot.imshow(numpy.reshape(vis_weights[layer][weights], (img_height, img_width)))
 		pyplot.axis('off')
+
+print(W[-1])
 
 # keep plots visible
 pyplot.show()
