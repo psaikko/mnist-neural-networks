@@ -5,6 +5,7 @@ matplotlib.use("TkAgg") # doesn't steal focus on update
 
 from matplotlib import pyplot
 from activation import *
+import time
 
 def loss(Y_pred, Y_true):
 	diff = numpy.reshape(Y_true - Y_pred, (Y_true.shape[0] * Y_true.shape[1]))
@@ -55,19 +56,26 @@ W = [2.0 * numpy.random.rand(layer_sizes[i+1], layer_sizes[i]) - 1.0
      for i in range(len(layer_sizes) - 1) ]
 
 # iterations of gradient descent
-epochs = 500
+epochs = 1000
 
 # gradient descent step size
 eps = 0.0001
 
 #pyplot.ion()
-pyplot.figure(1)
-#pyplot.axis([0,epochs,0,1])
+fig = pyplot.figure(1)
+axes = fig.add_subplot(1,1,1)
+#pyplot.axis([0,epochs-1,0,1])
 
 losses = []
 accs = []
 
+loss_line, acc_line = pyplot.plot([],[],[])
+pyplot.legend((loss_line, acc_line), ("loss", "accuracy"))
+
+opt_start = time.time()
+
 for i in range(epochs):
+	epoch_start = time.time()
 	deltas = []
 
 	# compute output of each layer
@@ -80,14 +88,20 @@ for i in range(epochs):
 	# compute loss and accuracy
 	acc = sum(result) / N_train
 	lss = loss(pred_y, onehot_train_y)
-	print("Epoch %-5d Accuracy %.4f Loss %.4f" % (i, acc, lss))
 
 	# plot loss and accuracy in realtime
-	losses += [lss]
-	accs += [acc]
-	pyplot.plot(range(i+1), losses, color='red')
-	pyplot.plot(range(i+1), accs, color='green')
-	pyplot.pause(0.01)
+	losses = numpy.append(loss_line.get_ydata(), [lss])
+	loss_line.set_ydata(losses)
+	accs = numpy.append(acc_line.get_ydata(), [acc])
+	acc_line.set_ydata(accs)
+
+	loss_line.set_xdata(numpy.append(loss_line.get_xdata(), [i]))
+	acc_line.set_xdata(numpy.append(acc_line.get_xdata(), [i]))
+
+	axes.relim()
+	axes.autoscale_view(True,True,True)
+
+	pyplot.pause(0.001)
 
 	err = pred_y - onehot_train_y
 
@@ -110,6 +124,10 @@ for i in range(epochs):
 	for (w, delta) in zip(reversed(W), deltas):
 		w += delta
 
+	epoch_time = time.time() - epoch_start
+	elapsed_time = time.time() - opt_start
+	print("Epoch %-5d Accuracy %.4f Loss %.4f Epoch %.2fs Total %.2fs" % (i, acc, lss, epoch_time, elapsed_time))
+
 # check predictions on test data
 predictions = forward_propagate(flattened_test_x, W, activations)[-1]
 correct_predictions = correct(onehot_test_y, predictions)
@@ -118,9 +136,7 @@ num_correct = sum(correct_predictions)
 print(num_correct)
 print("%d%% correct" % (num_correct * 100.0 / N_test))
 
-
 vis_weights = [[W[0][i] for i in range(W[0].shape[0])]]
-
 
 for (layer_size, layer_index) in zip(layer_sizes[2:], range(2,len(layer_sizes))):
 	layer_weights = []
@@ -146,8 +162,6 @@ for layer in range(sub_h):
 		pyplot.subplot(sub_h, sub_w, 1 + layer*sub_w + weights)
 		pyplot.imshow(numpy.reshape(vis_weights[layer][weights], (img_height, img_width)))
 		pyplot.axis('off')
-
-print(W[-1])
 
 # keep plots visible
 pyplot.show()
